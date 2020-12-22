@@ -1,0 +1,172 @@
+{"_comment": "This builds an Apache CloudStack Appliance.",
+"builders": [
+  {
+	"boot_command": [
+	  "<tab> text ks=floppy:/centos-kickstart-6.7.cfg<enter><wait>"
+	],
+	"boot_wait": "10s",
+	"disk_size": 40520,
+	"floppy_files": [
+	  "scripts/centos-kickstart-6.7.cfg"
+	],
+	"format": "ova",
+	"guest_os_type": "rhel8-64",
+	"headless": "true",
+	"iso_checksum": "sha256:c87a2d81d67bbaeaf646aea5bedd70990078ec252fc52f5a7d65ff609871e255",
+	"iso_url": "./iso/CentOS-8.2.2004-x86_64-dvd1.iso",
+	"name": "vmware",
+	"output_directory": "/data/packer/vmware",
+	"shutdown_command": "sudo -S shutdown -P now",
+	"shutdown_timeout": "2m",
+	"ssh_password": "{{user `sshpass`}}",
+	"ssh_port": 22,
+	"ssh_timeout": "1000s",
+	"ssh_username": "root",
+	"type": "vmware-iso",
+	"vm_name": "{{user `buildvmname`}}",
+	"vmx_data": {
+	  "ethernet0.addressType": "generated",
+	  "ethernet0.generatedAddressOffset": "0",
+	  "ethernet0.networkName": "{{ user `packer_remote_network` }}",
+	  "ethernet0.present": "TRUE",
+	  "ethernet0.startConnected": "TRUE",
+	  "ethernet0.virtualDev": "e1000",
+	  "ethernet0.wakeOnPcktRcv": "FALSE",
+	  "memsize": "{{user `vmmem`}}",
+	  "numvcpus": "{{user `vmvcpus`}}",
+	  "vhv.enable": "TRUE",
+	  "virtualHW.productCompatibility": "hosted"
+	},
+	"vmx_data_post": {
+	  "ethernet0.addressType": "generated",
+	  "ethernet0.generatedAddressOffset": "0",
+	  "ethernet0.networkName": "{{ user `packer_remote_network` }}",
+	  "ethernet0.present": "TRUE",
+	  "ethernet0.startConnected": "TRUE",
+	  "ethernet0.virtualDev": "e1000",
+	  "ethernet0.wakeOnPcktRcv": "FALSE",
+	  "ethernet1.addressType": "generated",
+	  "ethernet1.generatedAddressOffset": "0",
+	  "ethernet1.networkName": "{{ user `packer_remote_network` }}",
+	  "ethernet1.present": "TRUE",
+	  "ethernet1.startConnected": "TRUE",
+	  "ethernet1.virtualDev": "e1000",
+	  "ethernet1.wakeOnPcktRcv": "FALSE",
+	  "featMask.vm.hv.capable": "Min:1",
+	  "memsize": "{{user `vmmem`}}",
+	  "numvcpus": "{{user `vmvcpus`}}",
+	  "vhv.enable": "TRUE",
+	  "virtualHW.productCompatibility": "hosted",
+	  "vpmc.enable": "TRUE"
+	}
+  },
+  {
+	"accelerator": "kvm",
+	"boot_command": [
+	  "<tab> text ks=floppy:/centos-kickstart-6.7.cfg<enter><wait>"
+	],
+	"boot_wait": "10s",
+	"disk_compression": "true",
+	"disk_interface": "virtio",
+	"disk_size": "40520M",
+	"floppy_files": [
+	  "scripts/centos-kickstart-6.7.cfg"
+	],
+	"format": "qcow2",
+	"headless": "true",
+	"host_port_max": 2229,
+	"host_port_min": 2222,
+	"iso_checksum": "md5:af4a1640c0c6f348c6c41f1ea9e192a2",
+	"iso_url": "./iso/CentOS-6.9-x86_64-minimal.iso",
+	"name": "kvm",
+	"net_device": "virtio-net",
+	"output_directory": "/data/packer/kvm",
+	"shutdown_command": "shutdown -P now",
+	"ssh_password": "{{user `sshpass`}}",
+	"ssh_port": 22,
+	"ssh_timeout": "600s",
+	"ssh_username": "root",
+	"type": "qemu",
+	"vm_name": "{{user `buildvmname`}}"
+  },
+  {
+	"accelerator": "kvm",
+	"boot_command": [
+	  "<tab> text ks=floppy:/centos-kickstart-6.7.cfg<enter><wait>"
+	],
+	"boot_wait": "10s",
+	"disk_interface": "ide",
+	"disk_size": "40520M",
+	"floppy_files": [
+	  "scripts/centos-kickstart-6.7.cfg"
+	],
+	"format": "raw",
+	"headless": "true",
+	"host_port_max": 2229,
+	"host_port_min": 2222,
+	"iso_checksum": "md5:af4a1640c0c6f348c6c41f1ea9e192a2",
+	"iso_url": "./iso/CentOS-6.9-x86_64-minimal.iso",
+	"name": "xenserver",
+	"net_device": "e1000",
+	"output_directory": "/data/packer/xenserver",
+	"shutdown_command": "shutdown -P now",
+	"ssh_password": "{{user `sshpass`}}",
+	"ssh_port": 22,
+	"ssh_timeout": "600s",
+	"ssh_username": "root",
+	"type": "qemu",
+	"vm_name": "{{user `buildvmname`}}"
+  }
+],
+"description": "APACHE CLOUDSTACK Appliance",
+"post-processors": [
+  {
+	"inline": [
+	  "sh scripts/packageOVA.sh {{user `buildvmname`}}"
+	],
+	"only": [
+	  "vmware"
+	],
+	"type": "shell-local"
+  },
+  {
+	"inline": [
+	  "mv /data/packer/kvm/{{user `buildvmname`}} output/{{user `buildvmname`}}.qcow2"
+	],
+	"only": [
+	  "kvm"
+	],
+	"type": "shell-local"
+  },
+  {
+	"inline": [
+	  "vhd-util convert -s 0 -t 1 -i /data/packer/xenserver/{{user `buildvmname`}} -o /data/packer/xenserver/stagefixed.vhd || true",
+	  "faketime '2010-01-01' qemu-img convert -S 512 -O vpc -o subformat=dynamic /data/packer/xenserver/stagefixed.vhd /data/packer/xenserver/{{user `buildvmname`}}.vhd || true",
+	  "cp scripts/ACSAppliance-410-xs-template.ovf /data/packer/xenserver/{{user `buildvmname`}}.ovf || true",
+	  "tar -cf /data/packer/xenserver/{{user `buildvmname`}}-xs.ova -C /data/packer/xenserver/ {{user `buildvmname`}}.vhd {{user `buildvmname`}}.ovf || true",
+	  "pigz -k /data/packer/xenserver/{{user `buildvmname`}}-xs.ova || true",
+	  "mv /data/packer/xenserver/{{user `buildvmname`}}-xs.ova output/{{user `buildvmname`}}-xs.ova",
+	  "rm -rf /data/packer/xenserver"
+	],
+	"only": [
+	  "xenserver"
+	],
+	"type": "shell-local"
+  }
+],
+"provisioners": [
+  {
+	"playbook_file": "ansible/anscentosmgmt.yml",
+	"type": "ansible",
+	"user": "root"
+  }
+],
+"variables": {
+  "build_version": "0.0.1",
+  "buildvmname": "ACS-Appliance_414",
+  "http_directory": "scripts",
+  "sshpass": "password",
+  "vmmem": "4096",
+  "vmvcpus": "2"
+}
+}

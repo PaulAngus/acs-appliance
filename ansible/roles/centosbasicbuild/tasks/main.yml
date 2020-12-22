@@ -1,0 +1,58 @@
+---
+
+- name: Ensure EPEL is available (centOS6)
+  yum: name=http://www.mirrorservice.org/sites/dl.fedoraproject.org/pub/epel/epel-release-latest-6.noarch.rpm state=present
+
+- name: Install python-pip / vim / tree / ntp / wget
+  yum: name={{ item }} state=present
+  with_items:
+    - python-pip
+    - vim
+    - tree
+    - ntp
+    - wget
+    - bridge-utils
+    - libselinux-python
+
+- name: upgrade all packages
+  yum: name=* state=latest
+
+- name: Configure NTP
+  service: name=ntpd enabled=yes state=started
+
+- name: No DNS for ssh
+  lineinfile: dest=/etc/ssh/sshd_config line="UseDNS no"
+
+- name: Note packer build time
+  shell: date > /etc/packer_box_build_time
+
+- name: C6 networking
+  include: ./kvm_networking.yml
+  when: ansible_distribution_major_version == "6"
+
+- name: Environment notification
+  lineinfile: dest=/etc/motd line="\nApache CloudStack Demo Appliance, built with Packer.\n"
+
+- name: C6 networking
+  include: ./kvm_networking.yml
+  when: ansible_distribution_major_version == "6"
+
+- name: Copy configurator script to /usr/bin
+  template:
+    src: configure-appliance.j2
+    dest: /usr/bin/configure-appliance
+    mode: 0700
+
+- name: Additional Hypervisor Specific Configuration (KVM) 
+  include: ./kvm-specific.yml
+  when: packer_build_name == "kvm"
+
+
+- name: Additional Hypervisor Specific Configuration (XenServer) 
+  include: ./xenserver-specific.yml
+  when: packer_build_name == "xenserver"
+
+
+- name: Additional Hypervisor Specific Configuration (vSphere) 
+  include: ./vmware-ws-specific.yml
+  when: packer_build_name == "vmware"

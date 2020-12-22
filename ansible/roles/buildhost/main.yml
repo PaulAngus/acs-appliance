@@ -1,0 +1,40 @@
+---
+
+- name: Download if exe not present
+  get_url: url={{ item }} dest=../iso/ force=no
+  with_items:
+  - {{ c6isourl }}
+  - {{ cs_centos53x64_template }}
+  - {{ packer }}
+  - {{ workstation_bundle }}
+  - {{ vix_bundle }}
+
+#packer --> /usr/bin
+#http://packages.shapeblue.com.s3-eu-west-1.amazonaws.com/systemvmtemplate/vhd-util
+#http://packages.shapeblue.com.s3-eu-west-1.amazonaws.com/systemvmtemplate/libvhd.so.1.0  -->  /usr/lib/
+
+- name: Install packer
+  copy: src="../iso/packer" dest="/usr/bin/packer" mode=0777
+
+- name: install workstation
+  shell: "../iso/base({{ workstation_bundle }})"
+
+-# instaal qemu-kvm qemu-utils 
+
+#mkdir /vhd
+#cd /vhd
+#git clone https://github.com/rubiojr/vhd-util-convert/
+#cd vhd-util-convert/
+#ls
+#make
+#ls
+#./vhd-util
+#cp vhd-util /usr/bin/
+
+XS Xentools
+
+https://github.com/xenserver/xe-guest-utilities/releases/download/v6.6.80/xe-guest-utilities-6.6.80-17.x86_64.rpm
+https://github.com/xenserver/xe-guest-utilities/releases/download/v6.6.80/xe-guest-utilities-xenstore-6.6.80-17.x86_64.rpm
+=======
+#cp vhd-util /usr/bin
+

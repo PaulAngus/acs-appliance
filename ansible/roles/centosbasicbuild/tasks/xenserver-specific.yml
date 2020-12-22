@@ -1,0 +1,17 @@
+---
+
+- name: Copy Xen Tools to VM
+  copy:
+    src: "{{ item }}"
+    dest: /tmp
+  with_fileglob:
+    - xe-guest-utilities*
+
+- name: Install Xen Tools
+  command: rpm -ivh /tmp/xe-guest-utilities*
+
+- name: Install Xen Tools
+  file:
+    state: absent
+    path: /tmp/xe-guest-utilities
+
